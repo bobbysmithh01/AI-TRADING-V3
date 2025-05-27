@@ -11,21 +11,28 @@ def fetch_data(symbol, period="7d", interval="15m"):
         return None
 
 def evaluate_signal(df):
-    if df is None or df.empty:
+    if df is None or df.empty or len(df) < 250:
         return None
+
     df['EMA50'] = df['Close'].ewm(span=50).mean()
     df['EMA200'] = df['Close'].ewm(span=200).mean()
-    latest = df.iloc[-1]
-    if latest['EMA50'] > latest['EMA200']:
-        direction = "Buy"
-    else:
-        direction = "Sell"
+
+    latest = df.dropna().iloc[-1]  # Ensure no NaNs
+    ema_50 = latest.get('EMA50', None)
+    ema_200 = latest.get('EMA200', None)
+
+    if ema_50 is None or ema_200 is None:
+        return None
+
+    direction = "Buy" if ema_50 > ema_200 else "Sell"
+
     return {
         "symbol": df.name,
         "price": round(latest["Close"], 2),
         "direction": direction,
         "timestamp": str(latest.name)
     }
+
 
 def autonomous_trading_loop():
     symbols = ["XAUUSD=X", "^DJI", "^NDX", "EURUSD=X", "GBPUSD=X"]
